@@ -109,3 +109,20 @@ fn current() {
 		}
 	}
 }
+
+fn list_sessions( name_pattern: Option<&str> ) -> Vec<&str> {
+    let mut sessions: Vec<&str> = vec![];
+	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
+		for value in reg.values() {
+            let key = value.as_ref().unwrap().name();
+            // This for some reason creates different size of vec
+            //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
+            let data = &reg.value(key).unwrap();
+            match name_pattern {
+                Some(name_pattern) => { if data.to_string().contains(name_pattern) { sessions.push(&key.to_string_lossy()) } ; },
+                None => { sessions.push(&key.to_string_lossy()); },
+            };
+		}
+    }
+    sessions
+}
