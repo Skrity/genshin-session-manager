@@ -12,21 +12,19 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     check_sessionstore();
-    
-	//println!("The current session is: {:?}", session);name: Option<&str>
+
     let (command, name): (&str, Option<&str>);
     match args.len() {
         2 => { { (command, name) = (args[1].as_str(), None); } },
         3 => { (command, name) = (args[1].as_str(), Some(args[2].as_str())); },
         _ => { panic!("Expected 1-2 arguments, received {}", args.len()-1); },
     }
-    
     match command {
-        "current"=>current(),
-        "save"=>save(handle_name(name)),
-        "delete"=>delete(handle_name(name)),
-        //"run"=>println!("run"),
-        "load"=>load(handle_name(name)),
+        "c"|"current"=>current(),
+        "s"|"save"=>save(handle_name(name)),
+        "d"|"delete"=>delete(handle_name(name)),
+        "l"|"list"=>println!("{:?}", list_sessions(name)),
+        "r"|"load"=>load(handle_name(name)),
         _=> panic!("Command not recognized. Exiting..."),
     }
 }
@@ -82,9 +80,15 @@ fn save(name : &str) {
 }
 
 fn load(name : &str) {
-    println!("loading {}...",name);
-	write_session(read_session(Some(name)), None)
-	
+    let list = list_sessions( Some(name) );
+    match list.len() {
+        0=>println!("Session {} not found.",name),
+        1=>{
+            println!("Loading session: {}...",list[0]);
+            write_session(read_session(Some(&list[0])), None)
+        },
+        _=>println!("Session {} matches multiple sessions: {:?}", name, list),
+    }
 }
 
 fn delete(name : &str) {
@@ -92,36 +96,27 @@ fn delete(name : &str) {
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Write) {
 		println!("Result: {:?}",reg.delete_value(name));
 	}
-	
 }
 
 fn current() {
-    let session_data = &read_session(None);
-	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
-		for value in reg.values() {
-            let key = value.as_ref().unwrap().name();
-            // This for some reason creates different size of vec
-            //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
-            let data = &reg.value(key).unwrap();
-            if session_data.to_string() == data.to_string() {
-				println!("Current session is in session store under the name: {}", key.to_string_lossy());
-            };
-		}
-	}
+    let current_data = &read_session(None);
+    for value in list_sessions(None) {
+        let session_data = &read_session(Some(value.as_str()));
+        if current_data.to_string() == session_data.to_string() {
+            println!("Current session is in session store under the name: {}", value);
+        }
+    }
 }
 
-fn list_sessions( name_pattern: Option<&str> ) -> Vec<&str> {
-    let mut sessions: Vec<&str> = vec![];
+fn list_sessions( name_pattern: Option<&str> ) -> Vec<String> {
+    let mut sessions: Vec<String> = vec![];
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
-            let key = value.as_ref().unwrap().name();
-            // This for some reason creates different size of vec
-            //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
-            let data = &reg.value(key).unwrap();
+            let key = value.as_ref().unwrap().name().to_string_lossy();
             match name_pattern {
-                Some(name_pattern) => { if data.to_string().contains(name_pattern) { sessions.push(&key.to_string_lossy()) } ; },
-                None => { sessions.push(&key.to_string_lossy()); },
-            };
+                Some(name_pattern) => { if key.contains(name_pattern) { sessions.push(key) } ; },
+                None => { sessions.push(key); }
+            }
 		}
     }
     sessions
