@@ -15,16 +15,17 @@ fn main() {
 
     let (command, name): (&str, Option<&str>);
     match args.len() {
-        2 => { { (command, name) = (args[1].as_str(), None); } },
-        3 => { (command, name) = (args[1].as_str(), Some(args[2].as_str())); },
-        _ => { panic!("Expected 1-2 arguments, received {}", args.len()-1); },
+        0|1 =>panic!("Expected 1-2 arguments, received {}", args.len()-1),
+        2 => { (command, name) = (args[1].as_str(), None); },
+        _ => { (command, name) = (args[1].as_str(), Some(args[2].as_str())); },
     }
     match command {
         "c"|"current"=>current(),
         "s"|"save"=>save(handle_name(name)),
         "d"|"delete"=>delete(handle_name(name)),
         "l"|"list"=>println!("{:?}", list_sessions(name)),
-        "r"|"load"=>load(handle_name(name)),
+        "load"=>load(handle_name(name)),
+        "r"|"run"=>run(),
         _=> panic!("Command not recognized. Exiting..."),
     }
 }
@@ -120,4 +121,9 @@ fn list_sessions( name_pattern: Option<&str> ) -> Vec<String> {
 		}
     }
     sessions
+}
+use std::process::Command;
+fn run() {
+    let mut child = Command::new(r"C:\scoop\apps\rufus\current\rufus.exe").spawn().unwrap();
+    let _result = child.wait().unwrap();
 }
