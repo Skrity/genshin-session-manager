@@ -1,5 +1,6 @@
 use std::env;
 use registry::{Hive, Security};
+use std::process::Command;
 
 
 const MHY_KEY: &str = r"SOFTWARE\miHoYo\Genshin Impact";
@@ -122,8 +123,12 @@ fn list_sessions( name_pattern: Option<&str> ) -> Vec<String> {
     }
     sessions
 }
-use std::process::Command;
+
 fn run() {
-    let mut child = Command::new(r"C:\scoop\apps\rufus\current\rufus.exe").spawn().unwrap();
-    let _result = child.wait().unwrap();
+    let mut child = Command::new("cmd.exe")
+        .args(["/C",r"C:\scoop\apps\cpu-z\current\cpuz_x64.exe"])
+        .spawn()
+        .unwrap();
+    let result = child.wait().unwrap();
+    println!("Exit code: {:?}", result)
 }
