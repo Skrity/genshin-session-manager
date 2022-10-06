@@ -12,7 +12,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     check_sessionstore();
-    
+
 	//println!("The current session is: {:?}", session);name: Option<&str>
     let (command, name): (&str, Option<&str>);
     match args.len() {
@@ -20,7 +20,7 @@ fn main() {
         3 => { (command, name) = (args[1].as_str(), Some(args[2].as_str())); },
         _ => { panic!("Expected 1-2 arguments, received {}", args.len()-1); },
     }
-    
+
     match command {
         "current"=>current(),
         "save"=>save(handle_name(name)),
@@ -84,7 +84,6 @@ fn save(name : &str) {
 fn load(name : &str) {
     println!("loading {}...",name);
 	write_session(read_session(Some(name)), None)
-	
 }
 
 fn delete(name : &str) {
@@ -92,7 +91,6 @@ fn delete(name : &str) {
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Write) {
 		println!("Result: {:?}",reg.delete_value(name));
 	}
-	
 }
 
 fn current() {
@@ -110,8 +108,8 @@ fn current() {
 	}
 }
 
-fn list_sessions( name_pattern: Option<&str> ) -> Vec<&str> {
-    let mut sessions: Vec<&str> = vec![];
+fn list_sessions( name_pattern: Option<&str> ) -> Vec<String> {
+    let mut sessions: Vec<String> = vec![];
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
             let key = value.as_ref().unwrap().name();
@@ -119,8 +117,8 @@ fn list_sessions( name_pattern: Option<&str> ) -> Vec<&str> {
             //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
             let data = &reg.value(key).unwrap();
             match name_pattern {
-                Some(name_pattern) => { if data.to_string().contains(name_pattern) { sessions.push(&key.to_string_lossy()) } ; },
-                None => { sessions.push(&key.to_string_lossy()); },
+                Some(name_pattern) => { if data.to_string().contains(name_pattern) { sessions.push(key.to_string_lossy()) } ; },
+                None => { sessions.push(key.to_string_lossy()); },
             };
 		}
     }
