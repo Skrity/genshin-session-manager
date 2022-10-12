@@ -140,3 +140,9 @@ fn print_list(msg: &str, list: Vec<String>) {
     }
     print!("\n");
 }
+
+fn _run() {
+    use std::process::Command;
+    let mut child = Command::new(r"C:\scoop\apps\rufus\current\rufus.exe").spawn().unwrap();
+    let _result = child.wait().unwrap();
+}
