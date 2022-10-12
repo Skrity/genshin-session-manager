@@ -4,8 +4,6 @@ use registry::{Hive, Security};
 
 const MHY_KEY: &str = r"SOFTWARE\miHoYo\Genshin Impact";
 const MHY_REG: &str = "MIHOYOSDK_ADL_PROD_OVERSEA_h1158948810";
-
-
 const SESSIONS_KEY: &str = r"SOFTWARE\miHoYo\Genshin Impact\sessions";
 
 fn main() {
@@ -13,25 +11,32 @@ fn main() {
 
     check_sessionstore();
 
-	//println!("The current session is: {:?}", session);name: Option<&str>
-    let (command, name): (&str, Option<&str>);
-    match args.len() {
-        2 => { { (command, name) = (args[1].as_str(), None); } },
-        3 => { (command, name) = (args[1].as_str(), Some(args[2].as_str())); },
-        _ => { panic!("Expected 1-2 arguments, received {}", args.len()-1); },
-    }
+    let command = if let Some(c) = args.get(1) { c } else {
+        println!("No command specified.");
+        return
+    };
+    let name = args.get(2);
 
-    match command {
+    match command.as_str() {
         "current"=>current(),
         "save"=>save(handle_name(name)),
         "delete"=>delete(handle_name(name)),
+        "list"=>print_list("Sessions in store", list_sessions(None)),
+        "find"=>print_list("Sessions found", list_sessions(name)),
         //"run"=>println!("run"),
-        "load"=>load(handle_name(name)),
+        "load"=>{
+            let list = list_sessions(name);
+            match list.len() {
+                0 => println!("Supplied name not in session store."),
+                1 => load(&list[0]),
+                _ => println!("Too many matches with this name")
+            }
+        },
         _=> panic!("Command not recognized. Exiting..."),
     }
 }
 
-fn handle_name(name: Option<&str>) -> &str {
+fn handle_name(name: Option<&String>) -> &str {
     match name {
         Some(name) => name,
         None => panic!("This command requires an argument"),
@@ -95,6 +100,7 @@ fn delete(name : &str) {
 
 fn current() {
     let session_data = &read_session(None);
+    let mut found_one = false;
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
             let key = value.as_ref().unwrap().name();
@@ -103,24 +109,34 @@ fn current() {
             let data = &reg.value(key).unwrap();
             if session_data.to_string() == data.to_string() {
 				println!("Current session is in session store under the name: {}", key.to_string_lossy());
+                found_one = true;
             };
 		}
 	}
+    if !found_one {
+        println!("Current session is not in the session store.");
+    }
 }
 
-fn list_sessions( name_pattern: Option<&str> ) -> Vec<String> {
+fn list_sessions( name_pattern: Option<&String> ) -> Vec<String> {
     let mut sessions: Vec<String> = vec![];
 	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
-            let key = value.as_ref().unwrap().name();
-            // This for some reason creates different size of vec
-            //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
-            let data = &reg.value(key).unwrap();
-            match name_pattern {
-                Some(name_pattern) => { if data.to_string().contains(name_pattern) { sessions.push(key.to_string_lossy()) } ; },
-                None => { sessions.push(key.to_string_lossy()); },
+            let key = value.unwrap().name().to_string_lossy();
+            let matches = match name_pattern {
+                Some(name_pattern) => key.contains(name_pattern),
+                None => true,
             };
+            if matches { sessions.push(key) }
 		}
     }
     sessions
+}
+
+fn print_list(msg: &str, list: Vec<String>) {
+    print!("{}: ", msg);
+    for l in list {
+        print!("{} ", l);
+    }
+    print!("\n");
 }

@@ -11,3 +11,8 @@ registry = "1.2.1"
 [[bin]]
 name = "gsm"
 path = "src/main.rs"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"
