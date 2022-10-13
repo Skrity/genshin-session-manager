@@ -1,5 +1,9 @@
 use std::env;
-use registry::{Hive, Security};
+use registry::{
+    Hive::CurrentUser as HKCU,
+    Security,
+    Data
+};
 
 
 const MHY_KEY: &str = r"SOFTWARE\miHoYo\Genshin Impact";
@@ -52,10 +56,10 @@ fn select_key(name: Option<&str>) -> (&str, &str) {
 }
 
 // Takes session name or None, returns Data read
-fn read_session(name: Option<&str>) -> registry::Data {
+fn read_session(name: Option<&str>) -> Data {
 	let addr = select_key(name);
 
-    if let Ok(reg) = Hive::CurrentUser.open(addr.0, Security::Read) {
+    if let Ok(reg) = HKCU.open(addr.0, Security::Read) {
 		if let Ok(session) = reg.value(addr.1) {
 			session
 		} else {
@@ -66,16 +70,16 @@ fn read_session(name: Option<&str>) -> registry::Data {
     }
 }
 
-fn write_session(data: registry::Data, name: Option<&str>) {
+fn write_session(data: Data, name: Option<&str>) {
 	let addr = select_key(name);
-	if let Ok(reg) = Hive::CurrentUser.open(addr.0, Security::Write) {
+	if let Ok(reg) = HKCU.open(addr.0, Security::Write) {
 		println!("Result: {:?}",reg.set_value(addr.1, &data));
 	}
 }
 
 fn check_sessionstore() {
-    if let Err(_) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
-        if let Err(_) = Hive::CurrentUser.create(SESSIONS_KEY, Security::Read) {
+    if let Err(_) = HKCU.open(SESSIONS_KEY, Security::Read) {
+        if let Err(_) = HKCU.create(SESSIONS_KEY, Security::Read) {
 			panic!("Couldn't create sessions key. Terminating...");
 		}
     }
@@ -93,7 +97,7 @@ fn load(name : &str) {
 
 fn delete(name : &str) {
     println!("deleting {}...",name);
-	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Write) {
+	if let Ok(reg) = HKCU.open(SESSIONS_KEY, Security::Write) {
 		println!("Result: {:?}",reg.delete_value(name));
 	}
 }
@@ -101,11 +105,11 @@ fn delete(name : &str) {
 fn current() {
     let session_data = &read_session(None);
     let mut found_one = false;
-	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
+	if let Ok(reg) = HKCU.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
             let key = value.as_ref().unwrap().name();
             // This for some reason creates different size of vec
-            //let data: registry::Data = value.as_ref().unwrap().data().to_owned();
+            //let data: Data = value.as_ref().unwrap().data().to_owned();
             let data = &reg.value(key).unwrap();
             if session_data.to_string() == data.to_string() {
 				println!("Current session is in session store under the name: {}", key.to_string_lossy());
@@ -120,7 +124,7 @@ fn current() {
 
 fn list_sessions( name_pattern: Option<&String> ) -> Vec<String> {
     let mut sessions: Vec<String> = vec![];
-	if let Ok(reg) = Hive::CurrentUser.open(SESSIONS_KEY, Security::Read) {
+	if let Ok(reg) = HKCU.open(SESSIONS_KEY, Security::Read) {
 		for value in reg.values() {
             let key = value.unwrap().name().to_string_lossy();
             let matches = match name_pattern {
